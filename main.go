@@ -143,8 +143,12 @@ func getContext() (string, error) {
 		}
 
 		switch {
+		case conf.CurrentContext == "rancher2":
+			ctx = conf.CurrentContext
 		case nameSpace != "" && conf.CurrentContext == awsProfile:
 			ctx = conf.CurrentContext + "|" + nameSpace
+		case nameSpace != "" && conf.CurrentContext == "rancher2":
+			ctx = conf.CurrentContext
 		case conf.CurrentContext == awsProfile && nameSpace == "":
 			ctx = conf.CurrentContext
 		case conf.CurrentContext != awsProfile:
