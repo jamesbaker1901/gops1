@@ -65,33 +65,65 @@ func getPwd(pwd string) string {
 	return ps1Format + modPwd + ")"
 }
 
+func gitCheck(dir string) bool {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for _, file := range files {
+		if file.Name() == ".git" {
+			return true
+		}
+	}
+	return false
+}
+
 func gitInfo(pwd string) string {
 	ps1Space := `\[\033[00m\] `
 	gitPrompt := `\[\033[0;32m\](`
-	repo, err := git.PlainOpen(pwd)
-	if err != nil {
-		return ""
+	targetDir := ""
+	parentGit := false
+	path := strings.Split(pwd, "/")
+
+	for i, _ := range path {
+		if i == 0 {
+			targetDir = "/"
+		} else {
+			targetDir = strings.Join(path[0:i+1], "/")
+		}
+		if gitCheck(targetDir) {
+			parentGit = true
+			break
+		}
 	}
 
-	head, err := repo.Head()
-	if err == nil {
-		headStr := head.Name()
-		branch := strings.Replace(string(headStr), "refs/heads/", "", 1)
-
-		wt, _ := repo.Worktree()
-		status, _ := wt.Status()
-
-		if status.IsClean() {
-			gitPrompt = `\[\033[0;32m\](`
-		} else {
-			gitPrompt = `\[\033[0;31m\](`
+	if parentGit {
+		repo, err := git.PlainOpen(targetDir)
+		if err != nil {
+			return ""
 		}
 
-		return ps1Space + gitPrompt + branch + ")"
-	} else {
-		return ps1Space + `\[\033[0;31m\](` + "empty" + ")"
-	}
+		head, err := repo.Head()
+		if err == nil {
+			headStr := head.Name()
+			branch := strings.Replace(string(headStr), "refs/heads/", "", 1)
 
+			wt, _ := repo.Worktree()
+			status, _ := wt.Status()
+
+			if status.IsClean() {
+				gitPrompt = `\[\033[0;32m\](`
+			} else {
+				gitPrompt = `\[\033[0;31m\](`
+			}
+
+			return ps1Space + gitPrompt + branch + ")"
+		} else {
+			return ps1Space + `\[\033[0;31m\](` + "empty" + ")"
+		}
+	}
+	return ""
 }
 
 func dollarPrompt(exitCode string) string {
