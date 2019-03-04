@@ -37,7 +37,7 @@ If you don't use `kubectl` and don't have a `~/.kube/config` file, the second li
 
 `gops1` will display a green `$` prompt if the previous command exited with a 0 code, and a red `$` for other codes.
 
-Finally, if you set the environment variable `GOPS1_MINIMAL=true` `gops1` will simply print a `~ `for a prompt if you're finding all of the prompt info to be too cluttered. The prompt will stil show green/red depending on the exit code of the previous command though.
+Finally, if you set the environment variable `GOPS1_MINIMAL=true` `gops1` will simply print a `~ `for a prompt, which is nice if you're finding all of the prompt info to be too cluttered. The prompt will stil show green/red depending on the exit code of the previous command though.
 
 ## Installation
 
@@ -57,6 +57,6 @@ new_ps1 () {
 }
 PROMPT_COMMAND=new_ps1
 ```
-The two aliases are optional, and only need to be added if you intent to occaisionally used the minimal mode (`~`).
+The two aliases are optional, and only need to be added if you intend to occaisionally use the minimal mode (`~`).
 
 Then do `source ~/.bashrc` (or `source ~/.bash_profile`) for it to take effect. Enjoy!
