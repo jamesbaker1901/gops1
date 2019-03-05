@@ -45,17 +45,22 @@ func buildPS1(exitCode string) (string, error) {
 	ps1Line := `\[\e[0m\]\[\e[0;36m\]─`
 	ps1BottomBracket := `\[\e[0;36m\]└─`
 	ps1Space := `\[\033[00m\] `
-	//ps1UserUost := `\[\e[1;37m\][\u@\h]`
-	ps1User := `\[\e[1;37m\][\u]`
+	//ps1User := `\[\e[1;37m\][\u]`
 	ps1NewLine := `\n`
 	ps1Time := `\[\e[1;32m\][\A]`
-	//ps1Dollar := `\[\033[0;32m\]$`
-
 	pwd, _ := os.Getwd()
 	ps1Ctx, _ := getContext()
-	PS1 := ps1TopBracket + ps1User + ps1Line + getPwd(pwd) + gitInfo(pwd) + ps1NewLine + ps1BottomBracket + ps1Ctx + ps1Time + dollarPrompt(exitCode) + ps1Space
+
+	PS1 := ps1TopBracket + ps1User() + ps1Line + getPwd(pwd) + gitInfo(pwd) + ps1NewLine + ps1BottomBracket + ps1Ctx + ps1Time + dollarPrompt(exitCode) + ps1Space
 
 	return PS1, nil
+}
+
+func ps1User() string {
+	if os.Getenv("GOPS1_HOST") == "true" {
+		return `\[\e[1;37m\][\u@\h]`
+	}
+	return `\[\e[1;37m\][\u]`
 }
 
 func getPwd(pwd string) string {

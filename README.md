@@ -60,3 +60,8 @@ PROMPT_COMMAND=new_ps1
 The two aliases are optional, and only need to be added if you intend to occaisionally use the minimal mode (`~`).
 
 Then do `source ~/.bashrc` (or `source ~/.bash_profile`) for it to take effect. Enjoy!
+
+I personally don't care for displaying the host name in the `PS1` but many people like it. If you want `gops1` to display it, set the environment variable `GOPS1_HOST=true`. To permanently enable it, add this line to your `~/.bashrc`
+```
+export GOPS1_HOST=true
+```
