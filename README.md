@@ -61,7 +61,11 @@ The two aliases are optional, and only need to be added if you intend to occaisi
 
 Then do `source ~/.bashrc` (or `source ~/.bash_profile`) for it to take effect. Enjoy!
 
-I personally don't care for displaying the host name in the `PS1` but many people like it. If you want `gops1` to display it, set the environment variable `GOPS1_HOST=true`. To permanently enable it, add this line to your `~/.bashrc`
-```
-export GOPS1_HOST=true
-```
+## Configuration
+
+All configuration for `gops1` is done through environment variables. Supported variables are:
+
+* `GOPS1_MINIMAL` | boolean | If true, `gops1` will return only a `~` character. Useful to declutter your terminal.
+* `GOPS1_HOST` | boolean | If true, `gops1` will return a user and hostname for the first block, rather than the default of only user name. i.e., `[user@host]`
+* `GOPS1_PWD_DEPTH` | integer | Max depth to display current working directory in the `PS1`. If you are 15 directories deep, the `PS1` will become very unweildy. This just replaces the first n directories with `...`, where n is current directory depth - `GOPS1_PWD_DEPTH`. Default is 10.
+

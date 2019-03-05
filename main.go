@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	git "gopkg.in/src-d/go-git.v4"
@@ -66,8 +67,29 @@ func ps1User() string {
 func getPwd(pwd string) string {
 	ps1Format := `\[\e[0;93m\](`
 	home := os.Getenv("HOME")
+	out := ""
+
+	pwdMaxDepth := 20
+	if value, ok := os.LookupEnv("GOPS1_PWD_DEPTH"); ok {
+		pwdMaxDepth, _ = strconv.Atoi(value)
+	}
+
 	modPwd := strings.Replace(pwd, home, "~", 1)
-	return ps1Format + modPwd + ")"
+	path := strings.Split(modPwd, "/")
+
+	if len(path) > pwdMaxDepth {
+		if len(path)-pwdMaxDepth > 1 {
+			path = append(path[:1], path[len(path)-pwdMaxDepth+1:]...)
+			path[0] = path[0] + "/..."
+		} else {
+			path[1] = "..."
+		}
+
+		out = strings.Join(path, "/")
+	} else {
+		out = modPwd
+	}
+	return ps1Format + out + ")"
 }
 
 func gitCheck(dir string) bool {
