@@ -46,15 +46,27 @@ func buildPS1(exitCode string) (string, error) {
 	ps1Line := `\[\e[0m\]\[\e[0;36m\]─`
 	ps1BottomBracket := `\[\e[0;36m\]└─`
 	ps1Space := `\[\033[00m\] `
-	//ps1User := `\[\e[1;37m\][\u]`
 	ps1NewLine := `\n`
 	ps1Time := `\[\e[1;32m\][\A]`
 	pwd, _ := os.Getwd()
 	ps1Ctx, _ := getContext()
 
-	PS1 := ps1TopBracket + ps1User() + ps1Line + getPwd(pwd) + gitInfo(pwd) + ps1NewLine + ps1BottomBracket + ps1Ctx + ps1Time + dollarPrompt(exitCode) + ps1Space
+	var ps1 strings.Builder
+	//PS1 := ps1TopBracket + ps1User() + ps1Line + getPwd(pwd) + gitInfo(pwd) + ps1NewLine + ps1BottomBracket + ps1Ctx + ps1Time + dollarPrompt(exitCode) + ps1Space
 
-	return PS1, nil
+	ps1.WriteString(ps1TopBracket)
+	ps1.WriteString(ps1User())
+	ps1.WriteString(ps1Line)
+	ps1.WriteString(getPwd(pwd))
+	ps1.WriteString(gitInfo(pwd))
+	ps1.WriteString(ps1NewLine)
+	ps1.WriteString(ps1BottomBracket)
+	ps1.WriteString(ps1Ctx)
+	ps1.WriteString(ps1Time)
+	ps1.WriteString(dollarPrompt(exitCode))
+	ps1.WriteString(ps1Space)
+
+	return ps1.String(), nil
 }
 
 func ps1User() string {
