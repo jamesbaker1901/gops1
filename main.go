@@ -109,7 +109,7 @@ func main() {
 	ps1 := make([]string, 15)
 	var c Config
 	//c := yaml.MapSlice{}
-	bytes, err := ioutil.ReadFile("/Users/jaybaker/go/src/github.com/jamesbaker1901/test/config.yaml")
+	bytes, err := ioutil.ReadFile("./config.yaml")
 	if err != nil {
 		fmt.Println(err)
 	}
