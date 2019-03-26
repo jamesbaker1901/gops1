@@ -52,8 +52,6 @@ func buildPS1(exitCode string) (string, error) {
 	ps1Ctx, _ := getContext()
 
 	var ps1 strings.Builder
-	//PS1 := ps1TopBracket + ps1User() + ps1Line + getPwd(pwd) + gitInfo(pwd) + ps1NewLine + ps1BottomBracket + ps1Ctx + ps1Time + dollarPrompt(exitCode) + ps1Space
-
 	ps1.WriteString(ps1TopBracket)
 	ps1.WriteString(ps1User())
 	ps1.WriteString(ps1Line)
