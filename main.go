@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -11,97 +12,280 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-func main() {
-	PS1 := ""
-	exitCode := "0"
+var Dir string
+var ExitCode string
+
+type Renderer interface {
+	Render() (int, string)
+}
+
+type Config struct {
+	User          User          `yaml:"user,omitempty"`
+	Pwd           Pwd           `yaml:"pwd,omitempty"`
+	Line          Line          `yaml:"line,omitempty"`
+	Space         Space         `yaml:"space,omitempty"`
+	Git           Git           `yaml:"git,omitempty"`
+	NewLine       NewLine       `yaml:"newLine,omitempty"`
+	TopBracket    TopBracket    `yaml:"topBracket,omitempty"`
+	BottomBracket BottomBracket `yaml:"bottomBracket,omitempty"`
+	Context       Context       `yaml:"context,omitempty"`
+	Time          Time          `yaml:"time,omitempty"`
+	Prompt        Prompt        `yaml:"prompt,omitempty"`
+}
+
+type Block struct {
+	Formatting string `yaml:"formatting"`
+	Prefix     string `yaml:"prefix"`
+	Suffix     string `yaml:"suffix"`
+	Content    string `yaml:"content"`
+}
+
+type User struct {
+	Order int   `yaml:"order"`
+	Host  bool  `yaml:"host,omitempty"`
+	Block Block `yaml:"block,omitempty"`
+}
+
+type Pwd struct {
+	Order    int   `yaml:"order"`
+	MaxDepth int   `yaml:"maxDepth,omitempty"`
+	Block    Block `yaml:"block,omitempty"`
+}
+
+type Git struct {
+	Order int   `yaml:"order"`
+	Block Block `yaml:"block,omitempty"`
+}
+
+type Line struct {
+	Order int   `yaml:"order"`
+	Block Block `yaml:"block,omitempty"`
+}
+
+type Space struct {
+	Order int   `yaml:"order"`
+	Block Block `yaml:"block,omitempty"`
+}
+
+type NewLine struct {
+	Order int   `yaml:"order"`
+	Block Block `yaml:"block,omitempty"`
+}
+
+type TopBracket struct {
+	Order int   `yaml:"order"`
+	Block Block `yaml:"block,omitempty"`
+}
+
+type BottomBracket struct {
+	Order int   `yaml:"order"`
+	Block Block `yaml:"block,omitempty"`
+}
+
+type Context struct {
+	Order int   `yaml:"order"`
+	Block Block `yaml:"block,omitempty"`
+}
+
+type Time struct {
+	Order int   `yaml:"order"`
+	Block Block `yaml:"block,omitempty"`
+}
+
+type Prompt struct {
+	Order int   `yaml:"order"`
+	Block Block `yaml:"block,omitempty"`
+}
+
+func init() {
+	Dir, _ = os.Getwd()
+	ExitCode = "0"
 	if len(os.Args) >= 2 {
-		exitCode = os.Args[1]
+		ExitCode = os.Args[1]
 	}
-	if os.Getenv("GOPS1_MINIMAL") == "true" {
-		PS1 = buildMinimalPS1(exitCode)
+}
+
+func main() {
+	ps1 := make([]string, 15)
+	var c Config
+	//c := yaml.MapSlice{}
+	bytes, err := ioutil.ReadFile("/Users/jaybaker/go/src/github.com/jamesbaker1901/test/config.yaml")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = yaml.Unmarshal(bytes, &c)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	v := reflect.ValueOf(c)
+
+	//fmt.Println(c)
+
+	/*
+		for _, v := range c {
+			fmt.Println(v.Key)
+			b := []byte(v.Value.(string))
+			switch v.Key {
+			case "topBracket":
+				var topBracket TopBracket
+				err = yaml.Unmarshal(b, &topBracket)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+			fmt.Println(v.Value)
+		}
+	*/
+
+	values := make([]interface{}, v.NumField())
+
+	for i := 0; i < v.NumField(); i++ {
+		values[i] = v.Field(i).Interface()
+		element := values[i].(Renderer)
+		order, rendered := element.Render()
+		ps1[order] = rendered
+	}
+
+	ps1 = append(ps1, `\[\033[00m\] `)
+
+	var out strings.Builder
+	for _, val := range ps1 {
+		out.WriteString(val)
+	}
+
+	fmt.Println(out.String())
+
+}
+
+func (s Space) Render() (int, string) {
+	return s.Order - 1, s.Block.Render()
+}
+
+func (l Line) Render() (int, string) {
+	return l.Order - 1, l.Block.Render()
+}
+
+func (n NewLine) Render() (int, string) {
+	return n.Order - 1, n.Block.Render()
+}
+
+func (t TopBracket) Render() (int, string) {
+	return t.Order - 1, t.Block.Render()
+}
+
+func (b BottomBracket) Render() (int, string) {
+	return b.Order - 1, b.Block.Render()
+}
+
+func (t Time) Render() (int, string) {
+	return t.Order - 1, t.Block.Render()
+}
+
+func (p Prompt) Render() (int, string) {
+	if ExitCode == "0" {
+		p.Block.Formatting = `\[\033[0;32m\]`
 	} else {
-		PS1, _ = buildPS1(exitCode)
+		p.Block.Formatting = `\[\033[0;31m\]`
 	}
 
-	fmt.Println(PS1)
+	return p.Order - 1, p.Block.Render()
 }
 
-func buildMinimalPS1(exitCode string) string {
-	promptFormattingGreen := `\[\033[0;32m\]`
-	promptFormattingRed := `\[\033[0;31m\]`
-	ps1Space := `\[\033[00m\] `
-	PS1 := ""
-	if exitCode == "0" {
-		PS1 = promptFormattingGreen + "~" + ps1Space
-	} else {
-		PS1 = promptFormattingRed + "~" + ps1Space
+// KubeConfig represents a kubectl config file at ~/.kube/config
+type KubeConfig struct {
+	Contexts []struct {
+		Context struct {
+			Namespace string `yaml:"namespace"`
+		} `yaml:"context"`
+		Name string `yaml:"name"`
+	} `yaml:"contexts"`
+	CurrentContext string `yaml:"current-context"`
+}
+
+func (c Context) Render() (int, string) {
+	var conf KubeConfig
+	awsProfile := os.Getenv("AWS_PROFILE")
+	kubeConfigFile := os.Getenv("HOME") + "/.kube/config"
+	nameSpace := ""
+
+	bytes, err := ioutil.ReadFile(kubeConfigFile)
+	if err != nil {
+		return c.Order - 1, ""
 	}
 
-	return PS1
-
-}
-
-func buildPS1(exitCode string) (string, error) {
-	ps1TopBracket := `\[\e[0;36m\]┌─`
-	ps1Line := `\[\e[0m\]\[\e[0;36m\]─`
-	ps1BottomBracket := `\[\e[0;36m\]└─`
-	ps1Space := `\[\033[00m\] `
-	ps1NewLine := `\n`
-	ps1Time := `\[\e[1;32m\][\A]`
-	pwd, _ := os.Getwd()
-	ps1Ctx, _ := getContext()
-
-	var ps1 strings.Builder
-	//PS1 := ps1TopBracket + ps1User() + ps1Line + getPwd(pwd) + gitInfo(pwd) + ps1NewLine + ps1BottomBracket + ps1Ctx + ps1Time + dollarPrompt(exitCode) + ps1Space
-
-	ps1.WriteString(ps1TopBracket)
-	ps1.WriteString(ps1User())
-	ps1.WriteString(ps1Line)
-	ps1.WriteString(getPwd(pwd))
-	ps1.WriteString(gitInfo(pwd))
-	ps1.WriteString(ps1NewLine)
-	ps1.WriteString(ps1BottomBracket)
-	ps1.WriteString(ps1Ctx)
-	ps1.WriteString(ps1Time)
-	ps1.WriteString(dollarPrompt(exitCode))
-	ps1.WriteString(ps1Space)
-
-	return ps1.String(), nil
-}
-
-func ps1User() string {
-	if os.Getenv("GOPS1_HOST") == "true" {
-		return `\[\e[1;37m\][\u@\h]`
-	}
-	return `\[\e[1;37m\][\u]`
-}
-
-func getPwd(pwd string) string {
-	ps1Format := `\[\e[0;93m\](`
-	home := os.Getenv("HOME")
-	out := ""
-
-	pwdMaxDepth := 20
-	if value, ok := os.LookupEnv("GOPS1_PWD_DEPTH"); ok {
-		pwdMaxDepth, _ = strconv.Atoi(value)
+	err = yaml.Unmarshal(bytes, &conf)
+	if err != nil {
+		return c.Order - 1, ""
 	}
 
-	modPwd := strings.Replace(pwd, home, "~", 1)
-	path := strings.Split(modPwd, "/")
+	if conf.CurrentContext != "" {
+		for _, context := range conf.Contexts {
+			if context.Name == conf.CurrentContext {
+				nameSpace = context.Context.Namespace
+				break
+			}
 
-	if len(path) > pwdMaxDepth {
-		if len(path)-pwdMaxDepth > 1 {
-			path = append(path[:1], path[len(path)-pwdMaxDepth+1:]...)
-			path[0] = path[0] + "/..."
-		} else {
-			path[1] = "..."
 		}
 
-		out = strings.Join(path, "/")
-	} else {
-		out = modPwd
+		switch {
+		case nameSpace != "" && conf.CurrentContext == awsProfile:
+			c.Block.Content = conf.CurrentContext + "|" + nameSpace
+		case conf.CurrentContext == awsProfile && nameSpace == "":
+			c.Block.Content = conf.CurrentContext
+		case conf.CurrentContext != awsProfile:
+			c.Block.Content = "[a]" + awsProfile + "[k]" + conf.CurrentContext
+		}
 	}
-	return ps1Format + out + ")"
+
+	return c.Order - 1, c.Block.Render()
+}
+
+func (g Git) Render() (int, string) {
+	path := strings.Split(Dir, "/")
+	targetDir := ""
+	parentGit := false
+	for i, _ := range path {
+		if i == 0 {
+			targetDir = "/"
+		} else {
+			targetDir = strings.Join(path[0:i+1], "/")
+		}
+		if gitCheck(targetDir) {
+			parentGit = true
+			break
+		}
+	}
+
+	if parentGit {
+		repo, err := git.PlainOpen(targetDir)
+		if err != nil {
+			return 0, ""
+		}
+
+		head, err := repo.Head()
+		if err == nil {
+			headStr := head.Name()
+			branch := strings.Replace(string(headStr), "refs/heads/", "", 1)
+
+			wt, _ := repo.Worktree()
+			status, _ := wt.Status()
+
+			if status.IsClean() {
+				g.Block.Formatting = `\[\033[0;32m\]`
+			} else {
+				g.Block.Formatting = `\[\033[0;31m\]`
+			}
+			g.Block.Content = branch
+		} else {
+			g.Block.Content = "empty"
+		}
+	} else {
+		return 0, ""
+	}
+
+	return g.Order - 1, g.Block.Render()
 }
 
 func gitCheck(dir string) bool {
@@ -118,116 +302,47 @@ func gitCheck(dir string) bool {
 	return false
 }
 
-func gitInfo(pwd string) string {
-	ps1Space := `\[\033[00m\] `
-	gitPrompt := `\[\033[0;32m\](`
-	targetDir := ""
-	parentGit := false
-	path := strings.Split(pwd, "/")
-
-	for i, _ := range path {
-		if i == 0 {
-			targetDir = "/"
-		} else {
-			targetDir = strings.Join(path[0:i+1], "/")
-		}
-		if gitCheck(targetDir) {
-			parentGit = true
-			break
-		}
-	}
-
-	if parentGit {
-		repo, err := git.PlainOpen(targetDir)
-		if err != nil {
-			return ""
-		}
-
-		head, err := repo.Head()
-		if err == nil {
-			headStr := head.Name()
-			branch := strings.Replace(string(headStr), "refs/heads/", "", 1)
-
-			wt, _ := repo.Worktree()
-			status, _ := wt.Status()
-
-			if status.IsClean() {
-				gitPrompt = `\[\033[0;32m\](`
-			} else {
-				gitPrompt = `\[\033[0;31m\](`
-			}
-
-			return ps1Space + gitPrompt + branch + ")"
-		} else {
-			return ps1Space + `\[\033[0;31m\](` + "empty" + ")"
-		}
-	}
-	return ""
-}
-
-func dollarPrompt(exitCode string) string {
-	promptFormattingGreen := `\[\033[0;32m\]`
-	promptFormattingRed := `\[\033[0;31m\]`
-	if exitCode == "0" {
-		return promptFormattingGreen + "$"
+func (u User) Render() (int, string) {
+	if u.Host {
+		u.Block.Content = `\u@\h`
 	} else {
-		return promptFormattingRed + "$"
+		u.Block.Content = `\u`
 	}
+	return u.Order - 1, u.Block.Render()
 }
 
-// KubeConfig represents a kubectl config file at ~/.kube/config
-type KubeConfig struct {
-	Contexts []struct {
-		Context struct {
-			Namespace string `yaml:"namespace"`
-		} `yaml:"context"`
-		Name string `yaml:"name"`
-	} `yaml:"contexts"`
-	CurrentContext string `yaml:"current-context"`
+func (b *Block) Render() string {
+	var rendered strings.Builder
+	rendered.WriteString(b.Formatting)
+	rendered.WriteString(b.Prefix)
+	rendered.WriteString(b.Content)
+	rendered.WriteString(b.Suffix)
+	return rendered.String()
 }
 
-func getContext() (string, error) {
-	var conf KubeConfig
-	ctxFormatting := `\[\e[0;36m\](`
-	awsProfile := os.Getenv("AWS_PROFILE")
-	kubeConfigFile := os.Getenv("HOME") + "/.kube/config"
-	ctx := ""
-	nameSpace := ""
-
-	bytes, err := ioutil.ReadFile(kubeConfigFile)
-	if err != nil {
-		return "", err
-	}
-
-	err = yaml.Unmarshal(bytes, &conf)
-	if err != nil {
-		return "", err
-	}
-
-	if conf.CurrentContext != "" {
-		for _, context := range conf.Contexts {
-			if context.Name == conf.CurrentContext {
-				nameSpace = context.Context.Namespace
-				break
-			}
-
-		}
-
-		switch {
-		case conf.CurrentContext == "rancher2":
-			ctx = conf.CurrentContext
-		case nameSpace != "" && conf.CurrentContext == awsProfile:
-			ctx = conf.CurrentContext + "|" + nameSpace
-		case nameSpace != "" && conf.CurrentContext == "rancher2":
-			ctx = conf.CurrentContext
-		case conf.CurrentContext == awsProfile && nameSpace == "":
-			ctx = conf.CurrentContext
-		case conf.CurrentContext != awsProfile:
-			ctx = "[a]" + awsProfile + "[k]" + conf.CurrentContext
+func (p Pwd) Render() (int, string) {
+	home := os.Getenv("HOME")
+	if p.MaxDepth == 0 {
+		if value, ok := os.LookupEnv("GOPS1_PWD_DEPTH"); ok {
+			p.MaxDepth, _ = strconv.Atoi(value)
 		}
 	}
 
-	ctxString := ctxFormatting + ctx + ")"
+	modPwd := strings.Replace(Dir, home, "~", 1)
+	path := strings.Split(modPwd, "/")
 
-	return ctxString, nil
+	if len(path) > p.MaxDepth {
+		if len(path)-p.MaxDepth > 1 {
+			path = append(path[:1], path[len(path)-p.MaxDepth+1:]...)
+			path[0] = path[0] + "/..."
+		} else {
+			path[1] = "..."
+		}
+
+		p.Block.Content = strings.Join(path, "/")
+	} else {
+		p.Block.Content = modPwd
+	}
+
+	return p.Order - 1, p.Block.Render()
 }
